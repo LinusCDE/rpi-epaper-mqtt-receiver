@@ -49,6 +49,7 @@
 void LIBEPD_Init2in32Image(void);
 void LIBEPD_SelectImage(void);
 void LIBEPD_Display(void);
+void LIBEPD_DisplayPartialBase(void);
 void LIBEPD_DisplayPartial(void);
 
 #endif // _LIBEPD_H_

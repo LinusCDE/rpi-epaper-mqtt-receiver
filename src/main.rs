@@ -1,26 +1,26 @@
-use libepd::*;
-use libepd::MIRROR_IMAGE::MIRROR_HORIZONTAL;
-//use libc::*;
+use crate::eink::Color::{Black, White};
+use crate::eink::Pos;
+
+mod eink;
 
 fn main() {
-    unsafe {
-        println!("Initializing...");
-        if DEV_Module_Init() != 0 {
-            panic!("Failed to initialize device!");
-        }
+    println!("Initializing...");
 
-        println!("e-Paper Init and clear...");
-        EPD_2IN13_V2_Init(EPD_2IN13_V2_FULL as u8);
-        EPD_2IN13_V2_Clear();
-        DEV_Delay_ms(500);
+    let mut eink = eink::EInk::new(Black);
+    eink.to_partial_mode();
+    eink.delay(1000);
+    eink.draw_line(Pos {x: 0, y: 10}, Pos {x: eink.get_width(), y: 10}, White, 1);
+    eink.display();
+    eink.delay(500);
+    eink.draw_string(Pos {x: 20,y: 40}, "Hello World!", 24, White);
+    eink.display();
+    eink.delay(1000);
 
-        LIBEPD_Init2in32Image();
-        Paint_SetMirroring(MIRROR_HORIZONTAL as u8);
-        Paint_Clear(WHITE);
-        LIBEPD_Display();
+    eink.to_full_mode();
+    eink.clear(White);
+    eink.draw_string(Pos {x: 20, y: 40}, "Hello World!", 24, Black);
+    eink.display();
+    //eink.drawLine()
 
-        DEV_Delay_ms(1000);
-
-        //EPD_2in13_V2_test(); // Ensure to have pic folder in working dir!
-    }
+    //EPD_2in13_V2_test(); // Ensure to have pic folder in working dir!
 }

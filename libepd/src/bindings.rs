@@ -4,7 +4,7 @@ pub const DEV_HARDWARE_SPI_DEBUG: u32 = 0;
 pub const EPD_2IN13_V2_WIDTH: u16 = 122;
 pub const EPD_2IN13_V2_HEIGHT: u16 = 250;
 pub const EPD_2IN13_V2_FULL: u8 = 0;
-pub const EPD_2IN13_V2_PART: u32 = 1;
+pub const EPD_2IN13_V2_PART: u8 = 1;
 pub type __uint8_t = ::std::os::raw::c_uchar;
 pub type __uint16_t = ::std::os::raw::c_ushort;
 pub type __int32_t = ::std::os::raw::c_int;
@@ -288,6 +288,21 @@ fn bindgen_test_layout_cFONT() {
             stringify!(Height)
         )
     );
+}
+extern "C" {
+    pub static mut Font24: sFONT;
+}
+extern "C" {
+    pub static mut Font20: sFONT;
+}
+extern "C" {
+    pub static mut Font16: sFONT;
+}
+extern "C" {
+    pub static mut Font12: sFONT;
+}
+extern "C" {
+    pub static mut Font8: sFONT;
 }
 extern "C" {
     #[doc = " end"]
@@ -628,6 +643,9 @@ extern "C" {
 }
 extern "C" {
     pub fn LIBEPD_Display();
+}
+extern "C" {
+    pub fn LIBEPD_DisplayPartialBase();
 }
 extern "C" {
     pub fn LIBEPD_DisplayPartial();

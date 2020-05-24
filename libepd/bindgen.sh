@@ -15,7 +15,7 @@ fi
 PATH="$PATH:$PWD/llvmlinks" bindgen \
   src/libepd.h \
   --whitelist-function '^(DEV|EPD|Paint|GUI|LIBEPD)_.*' \
-  --whitelist-var '^(DEV|EPD)_.*' \
+  --whitelist-var '(^(DEV|EPD)_.*)|^(sFONT|cFONT|Font[0-9]+)$' \
   --rustified-enum '^(LINE_STYLE|DRAW_FILL|PAINT_TIME|BMP_FILE_HEADER|BMP_INFO|RGB_QUAD|PAINT|MIRROR_IMAGE|DOT_PIXEL|DOT_STYLE)$' \
   -o src/bindings.rs \
   -- \
@@ -28,4 +28,4 @@ PATH="$PATH:$PWD/llvmlinks" bindgen \
 sed -i 's/EPD_2IN13_V2_WIDTH: u32/EPD_2IN13_V2_WIDTH: u16/g' src/bindings.rs
 sed -i 's/EPD_2IN13_V2_HEIGHT: u32/EPD_2IN13_V2_HEIGHT: u16/g' src/bindings.rs
 sed -i 's/EPD_2IN13_V2_FULL: u32/EPD_2IN13_V2_FULL: u8/g' src/bindings.rs
-sed -i 's/EPD_2IN13_V2_PAIR: u32/EPD_2IN13_V2_PART: u8/g' src/bindings.rs
+sed -i 's/EPD_2IN13_V2_PART: u32/EPD_2IN13_V2_PART: u8/g' src/bindings.rs
