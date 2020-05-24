@@ -1,0 +1,3 @@
+[submodule "libepd/e-Paper"]
+	path = libepd/e-Paper
+	url = https://github.com/LinusCDE/e-Paper/
