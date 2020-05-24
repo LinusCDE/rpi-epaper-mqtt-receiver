@@ -21,6 +21,6 @@ fn main() {
 
         DEV_Delay_ms(1000);
 
-        <//EPD_2in13_V2_test(); // Ensure to have pic folder in working dir!
+        //EPD_2in13_V2_test(); // Ensure to have pic folder in working dir!
     }
 }
