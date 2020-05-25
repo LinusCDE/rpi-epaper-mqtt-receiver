@@ -5,6 +5,7 @@ use libepd::DOT_PIXEL::{DOT_PIXEL_2X2, DOT_PIXEL_1X1, DOT_PIXEL_3X3, DOT_PIXEL_4
 use libepd::LINE_STYLE::LINE_STYLE_SOLID;
 use crate::eink::DisplayMode::{Full, Partial};
 use crate::eink::Color::{White, Black};
+use serde::{Deserialize, Serialize, Serializer, Deserializer};
 
 pub enum DisplayMode {
     Full,
@@ -22,13 +23,34 @@ pub enum Color {
     White = WHITE as isize,
 }
 
+impl Serialize for Color {
+    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error> where
+        S: Serializer {
+        match self {
+            White => serializer.serialize_str("white"),
+            Black => serializer.serialize_str("black")
+        }
+    }
+}
+
+/*
+impl Deserialize<_> for Color {
+    fn deserialize<'de, D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error> where
+        D: Deserializer<'de> {
+        let string: String = (deserializer.into() as String).to_lowercase();
+        if string == "white" { Ok(White) }
+        else if string == "black" { Ok(Black) }
+        else { Err(deserializer) }
+    }
+}*/
+
 pub struct Pos {
     pub x: u16,
     pub y: u16,
 }
 
 impl EInk {
-    pub fn new(baseColor: Color) -> EInk {
+    pub fn new(base_color: Color) -> EInk {
         unsafe {
             if DEV_Module_Init() != 0 {
                 panic!("Failed to initialize device!");
@@ -45,7 +67,7 @@ impl EInk {
                 width: EPD_2IN13_V2_HEIGHT,
                 height: EPD_2IN13_V2_WIDTH
             };
-            eink.clear(baseColor);
+            eink.clear(base_color, None, None);
             eink.display();
             return eink;
         }
@@ -86,9 +108,15 @@ impl EInk {
         }
     }
 
-    pub fn clear(&self, color: Color) {
-        unsafe {
-            Paint_Clear(color as u16);
+    pub fn clear(&self, color: Color, from: Option<Pos>, to: Option<Pos>) {
+        if from.is_none() && to.is_none() {
+            unsafe { Paint_Clear(color as u16); }
+        } else {
+            let from = from.unwrap_or(Pos { x: 0, y: 0 });
+            let to = to.unwrap_or(Pos { x: self.get_width(), y: self.get_height() });
+            unsafe {
+                Paint_ClearWindows(from.x, from.y, to.x, to.y, color as u16);
+            }
         }
     }
 
@@ -134,7 +162,7 @@ impl EInk {
                 _ => Font8,
             };
 
-            let mut c_string = CString::new(text).unwrap();
+            let c_string = CString::new(text).unwrap();
             // Color(fg/bg) is inverted in function call for some reason
             let fg = match color {
                 Black => WHITE,
