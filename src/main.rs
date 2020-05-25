@@ -28,8 +28,16 @@ struct Config {
 
 #[derive(Deserialize)]
 struct Channels {
-    draw_calls: String,
-    status_report: String,
+    command_prefix: String,
+    echo_prefix: String,
+}
+
+struct Text {
+    from: Pos,
+    to: Pos,
+    size: u8,
+    text: String,
+    color: String
 }
 
 fn read_string_or_create_empty(path: &str) -> Result<String, &str> {
@@ -53,8 +61,8 @@ fn read_string_or_create_empty(path: &str) -> Result<String, &str> {
             #password = \"pass\"\n\
             \n\
             [channels]\n\
-            draw_calls = \"cmnd/rpi-epaper-mqtt-receiver/draw\"\n\
-            status_report = \"stat/rpi-epaper-mqtt-receiver/draw\"\n",
+            command_prefix = \"cmnd/rpi-epaper-mqtt-receiver/draw/\"\n\
+            echo_prefix = \"stat/rpi-epaper-mqtt-receiver/draw/\"\n",
             rand::thread_rng().gen_range(0, 10000)
         );
         match File::create(path) {
@@ -117,8 +125,8 @@ fn add_some_defaults(config: &mut Config) {
     }else {
         println!("Password: not set");
     }
-    println!("Draw calls command channel: {}", config.channels.draw_calls);
-    println!("Status Report channel: {}", config.channels.status_report);
+    println!("Command prefix: {}", config.channels.command_prefix);
+    println!("Echo prefix: {}", config.channels.echo_prefix);
 }
 
 fn main() {
@@ -127,7 +135,7 @@ fn main() {
     add_some_defaults(&mut config);
     let mqtt_options = MqttOptions::new(&config.id, &config.host, config.port);
     let (mut mqtt_client, notifications) = MqttClient::start(mqtt_options).unwrap();
-    mqtt_client.subscribe(&config.channels.draw_calls, ExactlyOnce);
+    mqtt_client.subscribe(config.channels.command_prefix.clone() + "+", ExactlyOnce);
 
     println!("Initializing...");
 
@@ -144,14 +152,14 @@ fn main() {
     for n in notifications {
         if let Publish(message) = n {
             if let Ok(text) = String::from_utf8(message.payload.to_vec()) {
-                if message.topic_name == config.channels.draw_calls {
-                    println!("Draw: {}", text);
+                let sp: Vec<&str> = message.topic_name.split("/").collect::<Vec<&str>>();
+                let command = sp[sp.len() - 1];
+                if command == "text" {
+                    println!("Text: {}", text);
                     eink.clear(White, None, None);
                     eink.draw_string(Pos {x: 0, y: 0}, &text, 24, Black);
                     eink.display();
                     eink.delay(500);
-                } else {
-                    println!("{}: {}", message.topic_name, text);
                 }
             }
         }
