@@ -5,8 +5,9 @@ use libepd::DOT_PIXEL::{DOT_PIXEL_2X2, DOT_PIXEL_1X1, DOT_PIXEL_3X3, DOT_PIXEL_4
 use libepd::LINE_STYLE::LINE_STYLE_SOLID;
 use crate::eink::DisplayMode::{Full, Partial};
 use crate::eink::Color::{White, Black};
-use serde::{Deserialize, Serialize, Serializer, Deserializer};
+use serde::Deserialize;
 
+#[derive(Deserialize, Debug)]
 pub enum DisplayMode {
     Full,
     Partial
@@ -18,32 +19,14 @@ pub struct EInk {
     height: u16,
 }
 
+#[derive(Deserialize, Debug, Copy, Clone)]
+#[repr(u16)]
 pub enum Color {
-    Black = BLACK as isize,
-    White = WHITE as isize,
+    Black = BLACK,
+    White = WHITE,
 }
 
-impl Serialize for Color {
-    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error> where
-        S: Serializer {
-        match self {
-            White => serializer.serialize_str("white"),
-            Black => serializer.serialize_str("black")
-        }
-    }
-}
-
-/*
-impl Deserialize<_> for Color {
-    fn deserialize<'de, D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error> where
-        D: Deserializer<'de> {
-        let string: String = (deserializer.into() as String).to_lowercase();
-        if string == "white" { Ok(White) }
-        else if string == "black" { Ok(Black) }
-        else { Err(deserializer) }
-    }
-}*/
-
+#[derive(Deserialize, Debug, Copy, Clone)]
 pub struct Pos {
     pub x: u16,
     pub y: u16,
@@ -113,7 +96,7 @@ impl EInk {
             unsafe { Paint_Clear(color as u16); }
         } else {
             let from = from.unwrap_or(Pos { x: 0, y: 0 });
-            let to = to.unwrap_or(Pos { x: self.get_width(), y: self.get_height() });
+            let to = to.unwrap_or(Pos { x: self.get_width()-1, y: self.get_height()-1 });
             unsafe {
                 Paint_ClearWindows(from.x, from.y, to.x, to.y, color as u16);
             }
@@ -175,6 +158,8 @@ impl EInk {
             Paint_DrawString_EN(pos.x, pos.y,  c_string.as_ptr() as *const _, &mut s_font, fg, bg);
         }
     }
+
+    //pub fn draw_rect(&self, )
 
     pub fn get_width(&self) -> u16 {
         self.width

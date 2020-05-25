@@ -1,5 +1,5 @@
 use crate::eink::Color::{Black, White};
-use crate::eink::{Pos, Color};
+use crate::eink::{Pos, Color, EInk};
 use toml;
 use std::path;
 use std::process::exit;
@@ -9,14 +9,18 @@ use serde::Deserialize;
 use rand;
 use rand::Rng;
 use rumqtt::{MqttOptions, MqttClient};
-use rumqtt::QoS::ExactlyOnce;
+use rumqtt::QoS::{ExactlyOnce, AtMostOnce};
 use rumqtt::client::Notification::Publish;
 use std::sync::Arc;
 use libepd::Font20;
+use crate::eink_calls::{ClearCall, TextCall, Callable, Call};
+use crate::eink_calls::Call::{Text, Clear, Display};
 
 mod eink;
+mod eink_calls;
 
-#[derive(Deserialize)]
+
+#[derive(Deserialize, Debug)]
 struct Config {
     host: String,
     port: u16,
@@ -26,19 +30,18 @@ struct Config {
     channels: Channels,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct Channels {
-    command_prefix: String,
-    echo_prefix: String,
+    call: String,
+    error: String,
 }
 
-struct Text {
-    from: Pos,
-    to: Pos,
-    size: u8,
-    text: String,
-    color: String
+#[derive(Deserialize, Debug)]
+struct CallContainer {
+    call: Call
 }
+
+
 
 fn read_string_or_create_empty(path: &str) -> Result<String, &str> {
     if path::Path::new(path).exists() {
@@ -61,8 +64,8 @@ fn read_string_or_create_empty(path: &str) -> Result<String, &str> {
             #password = \"pass\"\n\
             \n\
             [channels]\n\
-            command_prefix = \"cmnd/rpi-epaper-mqtt-receiver/draw/\"\n\
-            echo_prefix = \"stat/rpi-epaper-mqtt-receiver/draw/\"\n",
+            call = \"cmnd/rpi-epaper-mqtt-receiver/call\"\n\
+            error = \"stat/rpi-epaper-mqtt-receiver/error\"\n",
             rand::thread_rng().gen_range(0, 10000)
         );
         match File::create(path) {
@@ -94,25 +97,7 @@ fn read_config_or_panic(path: &str) -> Config {
     }
 }
 
-fn add_some_defaults(config: &mut Config) {
-    /*let port = match config.port {
-        Some(port) => port,
-        None => 1883
-    };
-
-
-    if let None = config.id {
-        config.id = Some(String::from(format!("rpi-epapepr-mqtt-receiver-{}", rand::thread_rng().gen_range(0, 10000))))
-    }
-
-    if let None = config.channels.unwrap().draw_calls {
-        config.channels.unwrap().draw_calls = Some(String::from("cmnd/rpi_epaper_mqtt_receiver/drawcalls"));
-    }
-
-    if let None = config.channels.unwrap().status_report {
-        config.channels.unwrap().status_report = Some(String::from("stat/rpi_epaper_mqtt_receiver/report"));
-    }*/
-
+fn print_config(config: &mut Config) {
     println!("Address: {}:{}", config.host, config.port);
     println!("Id: {}", config.id);
     if let Some(user) = &config.username {
@@ -125,17 +110,17 @@ fn add_some_defaults(config: &mut Config) {
     }else {
         println!("Password: not set");
     }
-    println!("Command prefix: {}", config.channels.command_prefix);
-    println!("Echo prefix: {}", config.channels.echo_prefix);
+    println!("Call: {}", config.channels.call);
+    println!("Error: {}", config.channels.error);
 }
 
 fn main() {
     println!("Loading toml...");
     let mut config = read_config_or_panic("config.toml");
-    add_some_defaults(&mut config);
+    print_config(&mut config);
     let mqtt_options = MqttOptions::new(&config.id, &config.host, config.port);
     let (mut mqtt_client, notifications) = MqttClient::start(mqtt_options).unwrap();
-    mqtt_client.subscribe(config.channels.command_prefix.clone() + "+", ExactlyOnce);
+    mqtt_client.subscribe(config.channels.call, AtMostOnce);
 
     println!("Initializing...");
 
@@ -151,24 +136,30 @@ fn main() {
 
     for n in notifications {
         if let Publish(message) = n {
-            if let Ok(text) = String::from_utf8(message.payload.to_vec()) {
-                let sp: Vec<&str> = message.topic_name.split("/").collect::<Vec<&str>>();
-                let command = sp[sp.len() - 1];
-                if command == "text" {
-                    println!("Text: {}", text);
-                    eink.clear(White, None, None);
-                    eink.draw_string(Pos {x: 0, y: 0}, &text, 24, Black);
-                    eink.display();
-                    eink.delay(500);
+            if let Ok(plain_text) = String::from_utf8(message.payload.to_vec()) {
+                let mut error_text: Option<String> = None;
+                match serde_json::from_str::<CallContainer>(&plain_text) {
+                    Ok(container) => {
+                        if let Err(reason) = container.call.call(&mut eink) {
+                            error_text = Some(reason)
+                        }
+                    },
+                    Err(e) => error_text = Some(format!("Couldn't parse or serialize json: {}", e))
+                }
+
+                if let Some(message) = error_text {
+                    mqtt_client.publish(&config.channels.error, AtMostOnce,
+                                        false, message.as_str());
                 }
             }
         }
     }
 
+    /*
     eink.to_full_mode();
     eink.clear(White, None, None);
     eink.draw_string(Pos {x: 20, y: 40}, "Hello World!", 24, Black);
-    eink.display();
+    eink.display();*/
     //eink.drawLine()
 
     //EPD_2in13_V2_test(); // Ensure to have pic folder in working dir!
