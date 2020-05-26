@@ -6,13 +6,18 @@ use std::path;
 use std::process::exit;
 use std::fs::File;
 use std::io::{Read, Write};
+use std::thread;
 use rand;
-use rand::Rng;
+use rand::{Rng, thread_rng};
 use rumqtt::{MqttOptions, MqttClient};
 use rumqtt::QoS::AtMostOnce;
 use rumqtt::client::Notification::Publish;
 use serde::Deserialize;
 use toml;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::sync::{Arc, Mutex};
+use crate::eink::{DisplayMode, EInk};
+use crate::eink_calls::Call::Display;
 
 
 #[derive(Deserialize, Debug)]
@@ -31,6 +36,10 @@ struct Channels {
     error: String,
 }
 
+struct TimestampedCalls {
+    calls: Vec<Call>,
+    received_at: u128
+}
 
 fn read_string_or_create_empty(path: &str) -> Result<String, &str> {
     if path::Path::new(path).exists() {
@@ -106,11 +115,19 @@ fn print_config(config: &mut Config) {
 }
 
 
+fn currentTime() -> u128 {
+    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis()
+}
+
+
 fn main() {
     println!("Loading toml...");
     let mut config = read_config_or_panic("config.toml");
     print_config(&mut config);
-    let mqtt_options = MqttOptions::new(&config.id, &config.host, config.port);
+    let mqtt_options = MqttOptions::new(&config.id, &config.host, config.port)
+        .set_connection_timeout(120) // Seconds
+        .set_keep_alive(120) // Seconds
+        .set_request_channel_capacity(128); // Cached messages?
     let (mut mqtt_client, notifications) = MqttClient::start(mqtt_options).unwrap();
     println!("Initializing display...");
     let mut eink = eink::EInk::new(White);
@@ -119,6 +136,39 @@ fn main() {
     println!("Start listening on MQTT...");
     mqtt_client.subscribe(config.channels.calls, AtMostOnce);
 
+
+    let timestamped_calls_queue: Vec<TimestampedCalls> = Vec::new();
+    let timestamped_calls_queue_mutex = Arc::new(Mutex::new(timestamped_calls_queue));
+    let eink_mutex = Mutex::new(eink);
+
+    let timestamped_calls_queue_mutexRecv = Arc::clone(&timestamped_calls_queue_mutex);
+    let handler = thread::spawn( move || {
+        loop {
+            thread::sleep(Duration::from_millis(50));
+            loop {
+                let nextCalls: Option<TimestampedCalls> = timestamped_calls_queue_mutexRecv.lock().unwrap().pop();
+                match nextCalls {
+                    Some(timestampedCalls) => {
+                        for timestampedCall in timestampedCalls.calls {
+                            match &timestampedCall {
+                                Display(call) => {
+                                    if currentTime() - timestampedCalls.received_at > 3000 {
+                                        println!("Discarded outdated call!");
+                                        // To old and takes only more time!
+                                    } else {
+                                        timestampedCall.call(&mut eink_mutex.lock().unwrap());
+                                    }
+                                },
+                                _ => { timestampedCall.call(&mut eink_mutex.lock().unwrap()); }
+                            };
+                        }
+                    }
+                    None => break
+                }
+            }
+        }
+    });
+
     for n in notifications {
         if let Publish(message) = n {
             // Decode mqtt payload
@@ -126,13 +176,8 @@ fn main() {
                 // Parse and serialize
                 match serde_json::from_str::<Vec<Call>>(&plain_text) {
                     Ok(calls) => {
-                        for call in calls {
-                            // Execute call and check for error
-                            if let Err(reason) = call.call(&mut eink) {
-                                mqtt_client.publish(&config.channels.error, AtMostOnce, false,
-                                                    reason.as_str());
-                            }
-                        }
+                        timestamped_calls_queue_mutex.lock().unwrap().push(TimestampedCalls {
+                            calls, received_at: currentTime() })
                     },
                     Err(err) => {
                         // Handle parsing/serialization error
