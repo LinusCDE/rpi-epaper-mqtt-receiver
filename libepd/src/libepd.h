@@ -17,8 +17,8 @@
 //#include "../e-Paper/RaspberryPi&JetsonNano/c/lib/e-Paper/EPD_2in13bc.h"
 //#include "../e-Paper/RaspberryPi&JetsonNano/c/lib/e-Paper/EPD_2in13b_V2.h"
 //#include "../e-Paper/RaspberryPi&JetsonNano/c/lib/e-Paper/EPD_2in13d.h"
-//#include "../e-Paper/RaspberryPi&JetsonNano/c/lib/e-Paper/EPD_2in13.h"
-#include "../e-Paper/RaspberryPi&JetsonNano/c/lib/e-Paper/EPD_2in13_V2.h"
+#include "../e-Paper/RaspberryPi&JetsonNano/c/lib/e-Paper/EPD_2in13.h"
+//#include "../e-Paper/RaspberryPi&JetsonNano/c/lib/e-Paper/EPD_2in13_V2.h" // used in branch ffi
 //#include "../e-Paper/RaspberryPi&JetsonNano/c/lib/e-Paper/EPD_2in7b.h"
 //#include "../e-Paper/RaspberryPi&JetsonNano/c/lib/e-Paper/EPD_2in7.h"
 //#include "../e-Paper/RaspberryPi&JetsonNano/c/lib/e-Paper/EPD_2in9bc.h"

@@ -42,16 +42,16 @@ impl EInk {
                 panic!("Failed to initialize device!");
             }
 
-            EPD_2IN13_V2_Init(EPD_2IN13_V2_FULL);
-            EPD_2IN13_V2_Clear();
+            EPD_2IN13_Init(EPD_2IN13_FULL);
+            EPD_2IN13_Clear();
             DEV_Delay_ms(500);
 
             LIBEPD_Init2in32Image();
             Paint_SetMirroring(MIRROR_HORIZONTAL as u8);
             let eink = EInk {
                 display_mode: Full,
-                width: EPD_2IN13_V2_HEIGHT,
-                height: EPD_2IN13_V2_WIDTH
+                width: EPD_2IN13_HEIGHT,
+                height: EPD_2IN13_WIDTH
             };
             eink.clear(base_color, None, None);
             eink.display();
@@ -65,9 +65,9 @@ impl EInk {
         }
 
         unsafe {
-            EPD_2IN13_V2_Init(EPD_2IN13_V2_FULL);
+            EPD_2IN13_Init(EPD_2IN13_FULL);
             LIBEPD_DisplayPartialBase();
-            EPD_2IN13_V2_Init(EPD_2IN13_V2_PART);
+            EPD_2IN13_Init(EPD_2IN13_PART);
             LIBEPD_SelectImage();
         }
         self.display_mode = Partial;
@@ -80,7 +80,7 @@ impl EInk {
         }
 
         unsafe {
-            EPD_2IN13_V2_Init(EPD_2IN13_V2_FULL);
+            EPD_2IN13_Init(EPD_2IN13_FULL);
             LIBEPD_SelectImage();
         }
         self.display_mode = Full;
@@ -97,9 +97,9 @@ impl EInk {
     pub fn refresh(&self) {
         if let Partial = self.display_mode {
             unsafe {
-                EPD_2IN13_V2_Init(EPD_2IN13_V2_FULL);
+                EPD_2IN13_Init(EPD_2IN13_FULL);
                 LIBEPD_DisplayPartialBase();
-                EPD_2IN13_V2_Init(EPD_2IN13_V2_PART);
+                EPD_2IN13_Init(EPD_2IN13_PART);
                 LIBEPD_SelectImage();
             }
         }

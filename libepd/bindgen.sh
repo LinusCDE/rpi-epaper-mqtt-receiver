@@ -25,7 +25,7 @@ PATH="$PATH:$PWD/llvmlinks" bindgen \
  -Ie-Paper/RaspberryPi\&JetsonNano/c/lib/GUI \
  -Ie-Paper/RaspberryPi\&JetsonNano/c/examples
 
-sed -i 's/EPD_2IN13_V2_WIDTH: u32/EPD_2IN13_V2_WIDTH: u16/g' src/bindings.rs
-sed -i 's/EPD_2IN13_V2_HEIGHT: u32/EPD_2IN13_V2_HEIGHT: u16/g' src/bindings.rs
-sed -i 's/EPD_2IN13_V2_FULL: u32/EPD_2IN13_V2_FULL: u8/g' src/bindings.rs
-sed -i 's/EPD_2IN13_V2_PART: u32/EPD_2IN13_V2_PART: u8/g' src/bindings.rs
+sed -i 's/EPD_2IN13_WIDTH: u32/EPD_2IN13_WIDTH: u16/g' src/bindings.rs
+sed -i 's/EPD_2IN13_HEIGHT: u32/EPD_2IN13_HEIGHT: u16/g' src/bindings.rs
+sed -i 's/EPD_2IN13_FULL: u32/EPD_2IN13_FULL: u8/g' src/bindings.rs
+sed -i 's/EPD_2IN13_PART: u32/EPD_2IN13_PART: u8/g' src/bindings.rs
